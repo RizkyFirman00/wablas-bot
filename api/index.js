@@ -7,6 +7,8 @@ export default async function handler(req, res) {
   const from = data.data?.phone || data.phone;
   const message = (data.data?.message || data.message || "").toLowerCase();
   const apiKey = process.env.WABLAS_API_KEY;
+  const secretKey = process.env.WABLAS_SECRET_KEY;
+  const authHeader = `${apiKey}.${secretKey}`;
 
   // Kirim pesan ke user
   const sendMessage = async (text, buttons = []) => {
@@ -16,7 +18,7 @@ export default async function handler(req, res) {
       buttons,
     };
     await axios.post("https://tegal.wablas.com/api/v2/send-button", payload, {
-      headers: { Authorization: apiKey },
+      headers: { Authorization: authHeader },
     });
   };
 
