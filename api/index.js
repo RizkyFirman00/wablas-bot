@@ -4,8 +4,8 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const data = req.body;
-  const from = data.phone;
-  const message = data.message.toLowerCase();
+  const from = data.data?.phone || data.phone;
+  const message = (data.data?.message || data.message || "").toLowerCase();
   const apiKey = process.env.WABLAS_API_KEY;
 
   // Kirim pesan ke user
@@ -19,6 +19,11 @@ export default async function handler(req, res) {
       headers: { Authorization: apiKey },
     });
   };
+
+  if (!data || !data.message) {
+    console.error("Webhook tidak berisi message:", data);
+    return res.status(400).send("Invalid payload");
+  }
 
   // Step 1 - Sambutan awal
   if (message === "hai" || message === "halo" || message === "menu") {
