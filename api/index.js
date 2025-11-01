@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       message: text,
       buttons,
     };
-    await axios.post("https://jogja.wablas.com/api/v2/send-button", payload, {
+    await axios.post("https://tegal.wablas.com/api/v2/send-button", payload, {
       headers: { Authorization: apiKey },
     });
   };
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   // Step 3 - Form input
   else if (message === "online") {
     await axios.post(
-      "https://jogja.wablas.com/api/v2/send-message",
+      "https://tegal.wablas.com/api/v2/send-message",
       {
         phone: from,
         message:
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     });
 
     await axios.post(
-      "https://jogja.wablas.com/api/v2/send-message",
+      "https://tegal.wablas.com/api/v2/send-message",
       {
         phone: from,
         message:
