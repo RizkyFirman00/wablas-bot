@@ -296,8 +296,8 @@ export default async function handler(req, res) {
           "Referensi Hari/Jam: [Hari/Tanggal dan Jam]\n\n" +
           "*Contoh:*\n" +
           "Nama: Budi Santoso\n" +
-          "Unit: Divisi Keuangan\n" +
-          "Jabatan: Staff\n" +
+          "Unit: Inspektorat\n" +
+          "Jabatan: Auditor Ahli Pertama\n" +
           "Referensi Hari/Jam: Senin, 4 Nov 2025 - 10:00 WIB"
       );
       return res.status(200).send("OK");
@@ -412,4 +412,5 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
 
