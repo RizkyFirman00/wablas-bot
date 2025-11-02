@@ -320,7 +320,7 @@ export default async function handler(req, res) {
           unit = line.substring(line.indexOf(":") + 1).trim();
         } else if (lower.startsWith("jabatan:")) {
           jabatan = line.substring(line.indexOf(":") + 1).trim();
-        } else if (lower.startsWith("Referensi Hari/Jam:")) {
+        } else if (lower.startsWith("referensi hari/jam:")) {
           waktu = line.substring(line.indexOf(":") + 1).trim();
         }
       }
@@ -419,4 +419,5 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
 
