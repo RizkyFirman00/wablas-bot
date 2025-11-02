@@ -150,7 +150,6 @@ export default async function handler(req, res) {
               message: {
                 buttons: buttonLabels,
                 content: text,
-                isGroup: false,
                 footer: "Pilih salah satu opsi di atas",
               },
             },
@@ -244,10 +243,10 @@ export default async function handler(req, res) {
     // STEP 2: Pilihan Layanan (1-4)
     if (["1", "2", "3", "4"].includes(message) && !session) {
       const layananMap = {
-        1: "Tata Kelola & Manajemen Risiko",
-        2: "Pengadaan Barang/Jasa",
-        3: "Pengelolaan Keuangan & BMN",
-        4: "Kinerja & Kepegawaian",
+        "1": "Tata Kelola & Manajemen Risiko",
+        "2": "Pengadaan Barang/Jasa",
+        "3": "Pengelolaan Keuangan & BMN",
+        "4": "Kinerja & Kepegawaian",
       };
 
       setSession(from, {
@@ -257,11 +256,11 @@ export default async function handler(req, res) {
 
       await sendButtons(
         `Anda memilih:\n*${layananMap[message]}*\n\n` +
-          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
+          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n\n" +
           "Mohon konfirmasi metode pelaksanaan konsultasi:",
         [
-          { label: "Offline (Tatap Muka)", id: "1" },
-          { label: "Online (Virtual)", id: "2" },
+          { label: "Offline (Tatap Muka)", id: "offline" },
+          { label: "Online (Virtual)", id: "online" },
         ]
       );
       return res.status(200).send("OK");
@@ -271,7 +270,7 @@ export default async function handler(req, res) {
     if (message === "5" && !session) {
       await sendMessage(
         "*Chat dengan Tim Inspektorat*\n\n" +
-          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n" +
+          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
           "Ketik *menu* untuk kembali ke menu utama."
       );
       setSession(from, { step: "chat_mode" });
@@ -279,22 +278,40 @@ export default async function handler(req, res) {
     }
 
     // STEP 4: Pilih metode (Online/Offline)
-    if (["1", "2"].includes(message) && session?.step === "choose_method") {
+    if (
+      ["online", "offline"].includes(message) &&
+      session?.step === "choose_method"
+    ) {
+      if (message === "offline") {
+        await sendMessage(
+          "*Konsultasi Offline*\n\n" +
+            "Untuk konsultasi tatap muka, silakan hubungi:\n" +
+            "📞 Telp: (021) xxx-xxxx\n" +
+            "📧 Email: inspektorat@lkpp.go.id\n\n" +
+            "Atau datang langsung ke:\n" +
+            "📍 Kantor LKPP, Jakarta\n\n" +
+            "Ketik *menu* untuk kembali."
+        );
+        clearSession(from);
+        return res.status(200).send("OK");
+      }
+
+      // Online - minta form
       setSession(from, {
         ...session,
         step: "fill_form",
-        metode: message,
+        metode: "online",
       });
 
       await sendMessage(
         "*Form Pendaftaran Konsultasi Online*\n\n" +
-          "Dimohon kesediaannya untuk mengisi data diri di bawah ini sebagai bagian dari proses pendataan\n\n" +
-          "*Format pengisian:*\n" +
+          "Dimohon kesediaannya untuk mengisi data berikut:\n\n" +
+          "Format pengisian:\n\n" +
           "Nama: [Nama lengkap Anda]\n" +
           "Unit: [Unit organisasi]\n" +
           "Jabatan: [Jabatan Anda]\n" +
           "Waktu: [Hari/Tanggal dan Jam]\n\n" +
-          "*Contoh:*\n" +
+          "Contoh:\n\n" +
           "Nama: Budi Santoso\n" +
           "Unit: Divisi Keuangan\n" +
           "Jabatan: Staff\n" +
@@ -405,12 +422,14 @@ export default async function handler(req, res) {
     }
 
     // Default: tidak dikenali
-    console.log(`Silent mode - ignoring message from ${from}: "${rawMessage}"`);
-    return res.status(200).send("OK");
+    await sendMessage(
+      "Maaf, saya tidak memahami perintah tersebut. 🤔\n\n" +
+        "Ketik *menu* untuk melihat pilihan layanan."
+    );
 
+    return res.status(200).send("OK");
   } catch (error) {
     console.error("Error in webhook handler:", error);
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
-
