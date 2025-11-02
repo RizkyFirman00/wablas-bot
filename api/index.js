@@ -18,7 +18,7 @@ const MENU_LIST_TEXT =
   "3. Pengelolaan Keuangan & BMN\n" +
   "4. Kinerja & Kepegawaian\n" +
   "5. Chat dengan Tim Inspektorat\n\n" +
-  "Balas dengan *angka* pilihan Anda (contoh: 1).";
+  "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
 export default async function handler(req, res) {
   // CORS headers
@@ -152,12 +152,23 @@ export default async function handler(req, res) {
 
     // Session management (VERSI REDIS)
     const getSession = async (phone) => {
-      // Kita pakai prefix 'session:' agar rapi di database Redis
-      const sessionString = await redis.get(`session:${phone}`);
+      const key = `session:${phone}`;
+      const sessionString = await redis.get(key);
+
       if (!sessionString) {
         return null;
       }
-      return JSON.parse(sessionString); // Kembalikan data sbg objek
+
+      try {
+        return JSON.parse(sessionString);
+      } catch (error) {
+        console.error(
+          `Failed to parse session for ${phone}. Data: "${sessionString}"`,
+          error
+        );
+        await redis.del(key);
+        return null;
+      }
     };
 
     const setSession = async (phone, data) => {
@@ -265,7 +276,7 @@ export default async function handler(req, res) {
         "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
         "1. Offline (Tatap Muka)\n" +
         "2. Online (Virtual)\n\n" +
-        "Balas dengan *angka* pilihan Anda (contoh: 1).";
+        "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
       await sendMessage(metodeText);
       return res.status(200).send("OK");
@@ -288,7 +299,7 @@ export default async function handler(req, res) {
       await setSession(from, {
         ...session,
         step: "fill_form",
-        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan angka
+        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan ANGKA
       });
 
       // Sesuaikan pesan berdasarkan pilihan metode
