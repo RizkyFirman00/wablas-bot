@@ -330,7 +330,7 @@ export default async function handler(req, res) {
           `Metode: ${session.metode}\n\n` +
           "Terima kasih telah menghubungi Klinik Konsultasi Inspektorat. " +
           "Permintaan Anda telah kami terima, dan tim kami akan segera menghubungi Anda untuk tindak lanjut.\n\n" +
-          "Ketik *menu* untuk layanan lainnya."
+          "Ketik *MENU* untuk layanan lainnya."
       );
 
       clearSession(from);
@@ -372,3 +372,4 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK
   }
 }
+
