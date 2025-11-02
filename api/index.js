@@ -18,7 +18,7 @@ const MENU_LIST_TEXT =
   "3. Pengelolaan Keuangan & BMN\n" +
   "4. Kinerja & Kepegawaian\n" +
   "5. Chat dengan Tim Inspektorat\n\n" +
-  "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
+  "Balas dengan *angka* pilihan Anda (contoh: 1).";
 
 export default async function handler(req, res) {
   // CORS headers
@@ -178,15 +178,10 @@ export default async function handler(req, res) {
       console.log(`Session cleared for ${phone}`);
     };
 
-    // Ambil session saat ini
-    let session = await getSession(from);
-    console.log(`Current session for ${from}:`, session);
-
     // ========== FLOW LOGIC ==========
-
     // STEP 1: Menu Utama
-    if (["hai", "halo", "menu", "mulai", "start"].includes(message)) {
-      await clearSession(from);
+    if (["hai", "halo", "menu", "mulai", "start", "batal"].includes(message)) {
+      await clearSession(from); // Hapus session apa pun yang ada
 
       const welcomeMenuText =
         "*Selamat datang di Layanan Klinik Konsultasi*\n" +
@@ -194,41 +189,73 @@ export default async function handler(req, res) {
         "Silakan pilih layanan konsultasi sesuai kebutuhan Anda:\n\n" +
         MENU_LIST_TEXT;
 
-      await sendMessage(welcomeMenuText);
+      await sendMessage(welcomeMenuText); // Delay sebentar sebelum return
 
-      // Delay sebentar sebelum return
       await new Promise((resolve) => setTimeout(resolve, 500));
-      return res.status(200).send("OK");
+      return res.status(200).send("OK"); // Langsung hentikan eksekusi
+    }
+
+    // Ambil session saat ini
+    let session = await getSession(from);
+    console.log(`Current session for ${from}:`, session);
+
+    // Definisi layanan
+    const layananMap = {
+      1: "Tata Kelola & Manajemen Risiko",
+      2: "Pengadaan Barang/Jasa",
+      3: "Pengelolaan Keuangan & BMN",
+      4: "Kinerja & Kepegawaian",
+    };
+
+    let layananTerpilih = null;
+
+    // Deteksi layanan berdasarkan keyword (jika tidak ada session)
+    if (!session) {
+      if (
+        message === "1" ||
+        message.includes("tata kelola") ||
+        message.includes("risiko")
+      ) {
+        layananTerpilih = layananMap["1"];
+      } else if (message === "2" || message.includes("pengadaan")) {
+        layananTerpilih = layananMap["2"];
+      } else if (
+        message === "3" ||
+        message.includes("keuangan") ||
+        message.includes("bmn")
+      ) {
+        layananTerpilih = layananMap["3"];
+      } else if (
+        message === "4" ||
+        message.includes("kinerja") ||
+        message.includes("kepegawaian")
+      ) {
+        layananTerpilih = layananMap["4"];
+      }
     }
 
     // STEP 2: Pilihan Layanan (1-4)
-    if (["1", "2", "3", "4"].includes(message) && !session) {
-      const layananMap = {
-        1: "Tata Kelola & Manajemen Risiko",
-        2: "Pengadaan Barang/Jasa",
-        3: "Pengelolaan Keuangan & BMN",
-        4: "Kinerja & Kepegawaian",
-      };
-
+    if (layananTerpilih && !session) {
       await setSession(from, {
         step: "choose_method",
-        layanan: layananMap[message],
+        layanan: layananTerpilih,
       });
 
       const metodeText =
-        `Anda memilih:\n*${layananMap[message]}*\n\n` +
+        `Anda memilih:\n*${layananTerpilih}*\n\n` +
         "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
         "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
         "1. Offline (Tatap Muka)\n" +
         "2. Online (Virtual)\n\n" +
-        "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
+        "Balas dengan *angka* pilihan Anda (contoh: 1).";
 
       await sendMessage(metodeText);
       return res.status(200).send("OK");
+      D;
     }
 
     // STEP 3: Chat langsung (opsi 5)
-    if (message === "5" && !session) {
+    if ((message === "5" || message.includes("chat")) && !session) {
       await sendMessage(
         "*Chat dengan Tim Inspektorat*\n\n" +
           "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
@@ -243,7 +270,7 @@ export default async function handler(req, res) {
       await setSession(from, {
         ...session,
         step: "fill_form",
-        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan ANGKA
+        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan angka
       });
 
       // Sesuaikan pesan berdasarkan pilihan metode
@@ -325,6 +352,14 @@ export default async function handler(req, res) {
           console.log("Data sent to spreadsheet successfully");
         } catch (error) {
           console.error("Error sending to spreadsheet:", error.message);
+
+          await sendMessage(
+            "❌ *Pendaftaran Gagal!*\n\n" +
+              "Maaf, terjadi kesalahan saat menyimpan pendaftaran Anda ke sistem kami.\n\n" +
+              "Data Anda *belum* terkirim. Silakan kirim ulang format isian Anda sekali lagi."
+          );
+
+          return res.status(200).send("OK");
         }
       }
 
@@ -381,4 +416,3 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK
   }
 }
-
