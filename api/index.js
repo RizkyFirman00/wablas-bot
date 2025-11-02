@@ -111,6 +111,7 @@ export default async function handler(req, res) {
             {
               phone: from,
               message: text,
+              isGroup: false,
             },
           ],
         };
@@ -147,6 +148,7 @@ export default async function handler(req, res) {
         const messageData = {
           buttons: buttonLabels,
           content: text,
+          isGroup: false,
           footer: "Pilih salah satu opsi di atas",
         };
 
@@ -163,6 +165,7 @@ export default async function handler(req, res) {
             {
               phone: from,
               message: messageData,
+              isGroup: false,
             },
           ],
         };
@@ -443,3 +446,4 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
