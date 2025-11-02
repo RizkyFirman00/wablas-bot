@@ -18,7 +18,7 @@ const MENU_LIST_TEXT =
   "3. Pengelolaan Keuangan & BMN\n" +
   "4. Kinerja & Kepegawaian\n" +
   "5. Chat dengan Tim Inspektorat\n\n" +
-  "Balas dengan *angka* pilihan Anda (contoh: 1).";
+  "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
 export default async function handler(req, res) {
   // CORS headers
@@ -221,7 +221,7 @@ export default async function handler(req, res) {
         "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
         "1. Offline (Tatap Muka)\n" +
         "2. Online (Virtual)\n\n" +
-        "Balas dengan *angka* pilihan Anda (contoh: 1).";
+        "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
       await sendMessage(metodeText);
       return res.status(200).send("OK");
@@ -243,7 +243,7 @@ export default async function handler(req, res) {
       await setSession(from, {
         ...session,
         step: "fill_form",
-        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan angka
+        metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan ANGKA
       });
 
       // Sesuaikan pesan berdasarkan pilihan metode
@@ -381,3 +381,4 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK
   }
 }
+
