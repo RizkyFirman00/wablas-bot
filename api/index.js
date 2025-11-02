@@ -1,5 +1,14 @@
 import axios from "axios";
 
+app.get("/", (req, res) => {
+  res.send(`
+    <h2>🚀 Wablas Bot API is Running</h2>
+    <p>Server aktif dan siap menerima webhook dari Wablas.</p>
+    <p><strong>POST /</strong> untuk webhook handler.</p>
+  `);
+});
+
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
