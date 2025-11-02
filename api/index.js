@@ -180,7 +180,25 @@ export default async function handler(req, res) {
 
     // ========== FLOW LOGIC ==========
     // STEP 1: Menu Utama
-    if (["hai", "halo", "menu", "mulai", "start", "batal"].includes(message)) {
+    if (
+      [
+        "hai",
+        "halo",
+        "hallo",
+        "selamat pagi",
+        "pagi",
+        "selamat siang",
+        "siang",
+        "selamat sore",
+        "sore",
+        "selamat malam",
+        "malam",
+        "menu",
+        "mulai",
+        "start",
+        "batal",
+      ].includes(message)
+    ) {
       await clearSession(from); // Hapus session apa pun yang ada
 
       const welcomeMenuText =
