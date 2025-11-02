@@ -283,7 +283,7 @@ export default async function handler(req, res) {
       setSession(from, {
         ...session,
         step: "fill_form",
-        metode: "online",
+        metode: message,
       });
 
       await sendMessage(
@@ -413,3 +413,4 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
