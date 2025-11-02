@@ -216,6 +216,19 @@ export default async function handler(req, res) {
 
     // Ambil session saat ini
     let session = getSession(from);
+
+    if (!session) {
+      await sendMessage(
+        `👋 Halo ${
+          pushName || ""
+        }! Selamat datang di Layanan Klinik Konsultasi *Inspektorat LKPP*.\n\n` +
+          "Ketik *halo*, *hai*, atau *menu* untuk memulai percakapan dan melihat pilihan layanan."
+      );
+
+      setSession(from, { step: "greeted" });
+      return res.status(200).send("OK");
+    }
+
     console.log(`Current session for ${from}:`, session);
 
     // ========== FLOW LOGIC ==========
@@ -408,17 +421,14 @@ export default async function handler(req, res) {
     console.log(`Perintah tidak dikenali dari ${from}: "${rawMessage}"`);
 
     await sendMessage(
-      "Maaf, saya tidak memahami perintah tersebut. " +
-        "Silahkan kirim pesan sesuai dengan yang diperintahkan.\n\n" +
+      "Maaf, saya tidak memahami perintah tersebut.\n" +
+        "*Silahkan kirim pesan sesuai dengan yang diperintahkan.*\n\n" +
         "Ketik *Menu* untuk melihat pilihan layanan."
     );
-    
+
     return res.status(200).send("OK");
   } catch (error) {
     console.error("Error in webhook handler:", error);
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
-
-
-
