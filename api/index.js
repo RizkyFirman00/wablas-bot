@@ -111,7 +111,6 @@ export default async function handler(req, res) {
             {
               phone: from,
               message: text,
-              isGroup: false,
             },
           ],
         };
@@ -139,33 +138,21 @@ export default async function handler(req, res) {
       }
     };
 
-    const sendButtons = async (text, buttons, headerText = null) => {
+    const sendButtons = async (text, buttons) => {
       try {
         console.log(`Attempting to send buttons to ${from}...`);
         const buttonLabels = buttons.map((btn) => btn.label || btn);
-
-        // Format sesuai dokumentasi Wablas dengan header
-        const messageData = {
-          buttons: buttonLabels,
-          content: text,
-          isGroup: false,
-          footer: "Pilih salah satu opsi di atas",
-        };
-
-        // Tambahkan header jika ada
-        if (headerText) {
-          messageData.header = {
-            type: "text",
-            content: headerText,
-          };
-        }
 
         const payload = {
           data: [
             {
               phone: from,
-              message: messageData,
-              isGroup: false,
+              message: {
+                buttons: buttonLabels,
+                content: text,
+                isGroup: false,
+                footer: "Pilih salah satu opsi di atas",
+              },
             },
           ],
         };
@@ -237,15 +224,16 @@ export default async function handler(req, res) {
     if (["hai", "halo", "menu", "mulai", "start"].includes(message)) {
       clearSession(from);
       await sendButtons(
-        "Silakan pilih layanan konsultasi sesuai kebutuhan Anda:",
+        "*Selamat datang di Layanan Klinik Konsultasi*\n" +
+          "*Inspektorat LKPP*\n\n" +
+          "Silakan pilih layanan konsultasi sesuai kebutuhan Anda:",
         [
-          "Tata Kelola & Manajemen Risiko",
-          "Pengadaan Barang/Jasa", 
-          "Pengelolaan Keuangan & BMN",
-          "Kinerja & Kepegawaian",
-          "Chat dengan Tim Inspektorat",
-        ],
-        "🏥 Selamat Datang di Klinik Konsultasi Inspektorat LKPP"
+          { label: "Tata Kelola & Manajemen Risiko", id: "1" },
+          { label: "Pengadaan Barang/Jasa", id: "2" },
+          { label: "Pengelolaan Keuangan & BMN", id: "3" },
+          { label: "Kinerja & Kepegawaian", id: "4" },
+          { label: "Chat dengan Tim Inspektorat", id: "5" },
+        ]
       );
 
       // Delay sebentar sebelum return untuk memastikan pesan terkirim
@@ -256,10 +244,10 @@ export default async function handler(req, res) {
     // STEP 2: Pilihan Layanan (1-4)
     if (["1", "2", "3", "4"].includes(message) && !session) {
       const layananMap = {
-        "1": "Tata Kelola & Manajemen Risiko",
-        "2": "Pengadaan Barang/Jasa",
-        "3": "Pengelolaan Keuangan & BMN",
-        "4": "Kinerja & Kepegawaian",
+        1: "Tata Kelola & Manajemen Risiko",
+        2: "Pengadaan Barang/Jasa",
+        3: "Pengelolaan Keuangan & BMN",
+        4: "Kinerja & Kepegawaian",
       };
 
       setSession(from, {
@@ -269,11 +257,11 @@ export default async function handler(req, res) {
 
       await sendButtons(
         `Anda memilih:\n*${layananMap[message]}*\n\n` +
-          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n\n" +
+          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
           "Mohon konfirmasi metode pelaksanaan konsultasi:",
         [
-          { label: "Offline (Tatap Muka)", id: "offline" },
-          { label: "Online (Virtual)", id: "online" },
+          { label: "Offline (Tatap Muka)", id: "1" },
+          { label: "Online (Virtual)", id: "2" },
         ]
       );
       return res.status(200).send("OK");
@@ -283,7 +271,7 @@ export default async function handler(req, res) {
     if (message === "5" && !session) {
       await sendMessage(
         "*Chat dengan Tim Inspektorat*\n\n" +
-          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
+          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n" +
           "Ketik *menu* untuk kembali ke menu utama."
       );
       setSession(from, { step: "chat_mode" });
@@ -291,26 +279,22 @@ export default async function handler(req, res) {
     }
 
     // STEP 4: Pilih metode (Online/Offline)
-    if (
-      ["online", "offline"].includes(message) &&
-      session?.step === "choose_method"
-    ) {
-      // Updat session dengan metode yang dipilih
+    if (["1", "2"].includes(message) && session?.step === "choose_method") {
       setSession(from, {
         ...session,
         step: "fill_form",
-        metode: message,
+        metode: "online",
       });
 
       await sendMessage(
         "*Form Pendaftaran Konsultasi Online*\n\n" +
-          "Dimohon kesediaannya untuk mengisi data berikut:\n\n" +
-          "Format pengisian:\n\n" +
+          "Dimohon kesediaannya untuk mengisi data diri di bawah ini sebagai bagian dari proses pendataan\n\n" +
+          "*Format pengisian:*\n" +
           "Nama: [Nama lengkap Anda]\n" +
           "Unit: [Unit organisasi]\n" +
           "Jabatan: [Jabatan Anda]\n" +
           "Waktu: [Hari/Tanggal dan Jam]\n\n" +
-          "Contoh:\n\n" +
+          "*Contoh:*\n" +
           "Nama: Budi Santoso\n" +
           "Unit: Divisi Keuangan\n" +
           "Jabatan: Staff\n" +
@@ -421,16 +405,11 @@ export default async function handler(req, res) {
     }
 
     // Default: tidak dikenali
-    await sendMessage(
-      "Maaf, saya tidak memahami perintah tersebut. 🤔\n\n" +
-        "Ketik *menu* untuk melihat pilihan layanan."
-    );
-
+    console.log(`Silent mode - ignoring message from ${from}: "${rawMessage}"`);
     return res.status(200).send("OK");
+
   } catch (error) {
     console.error("Error in webhook handler:", error);
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
-
-
