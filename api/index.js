@@ -394,13 +394,6 @@ export default async function handler(req, res) {
           ]
         );
         return res.status(200).send("OK");
-      } else {
-        await sendMessage(
-          "✅ Pesan Anda telah kami terima:\n" +
-            `"${rawMessage}"\n\n` +
-            "Tim kami akan segera merespons. Terima kasih!"
-        );
-        return res.status(200).send("OK");
       }
     }
 
@@ -419,5 +412,6 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
 
 
