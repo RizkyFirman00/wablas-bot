@@ -1,7 +1,11 @@
 import axios from "axios";
+import { Redis } from "@upstash/redis";
 
-// Session storage sederhana (dalam production sebaiknya pakai Redis/Database)
-const sessions = new Map();
+// Inisialisasi Redis (di luar handler)
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 // Konfigurasi
 const WABLAS_BASE_URL = "https://tegal.wablas.com/api/v2";
@@ -146,38 +150,43 @@ export default async function handler(req, res) {
       }
     };
 
-    // Session management
-    const getSession = (phone) => {
-      const session = sessions.get(phone);
-      if (session && Date.now() - session.timestamp > SESSION_TIMEOUT) {
-        sessions.delete(phone);
+    // Session management (VERSI REDIS)
+    const getSession = async (phone) => {
+      // Kita pakai prefix 'session:' agar rapi di database Redis
+      const sessionString = await redis.get(`session:${phone}`);
+      if (!sessionString) {
         return null;
       }
-      return session;
+      return JSON.parse(sessionString); // Kembalikan data sbg objek
     };
 
-    const setSession = (phone, data) => {
-      sessions.set(phone, {
-        ...data,
-        timestamp: Date.now(),
-      });
-      console.log(`Session set for ${phone}:`, data);
+    const setSession = async (phone, data) => {
+      const key = `session:${phone}`;
+      const value = JSON.stringify(data);
+      // Konversi SESSION_TIMEOUT (milidetik) ke detik untuk Redis
+      const expiryInSeconds = Math.floor(SESSION_TIMEOUT / 1000); // 1800 detik
+
+      await redis.set(key, value, { ex: expiryInSeconds });
+      console.log(
+        `Session set for ${phone} (expires in ${expiryInSeconds}s):`,
+        data
+      );
     };
 
-    const clearSession = (phone) => {
-      sessions.delete(phone);
+    const clearSession = async (phone) => {
+      await redis.del(`session:${phone}`);
       console.log(`Session cleared for ${phone}`);
     };
 
     // Ambil session saat ini
-    let session = getSession(from);
+    let session = await getSession(from);
     console.log(`Current session for ${from}:`, session);
 
     // ========== FLOW LOGIC ==========
 
     // STEP 1: Menu Utama
     if (["hai", "halo", "menu", "mulai", "start"].includes(message)) {
-      clearSession(from);
+      await clearSession(from);
 
       const welcomeMenuText =
         "*Selamat datang di Layanan Klinik Konsultasi*\n" +
@@ -201,7 +210,7 @@ export default async function handler(req, res) {
         4: "Kinerja & Kepegawaian",
       };
 
-      setSession(from, {
+      await setSession(from, {
         step: "choose_method",
         layanan: layananMap[message],
       });
@@ -225,13 +234,13 @@ export default async function handler(req, res) {
           "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
           "Ketik *MENU* untuk kembali ke menu utama."
       );
-      setSession(from, { step: "chat_mode" });
+      await setSession(from, { step: "chat_mode" });
       return res.status(200).send("OK");
     }
 
     // STEP 4: Pilih metode (Online/Offline)
     if (["1", "2"].includes(message) && session?.step === "choose_method") {
-      setSession(from, {
+      await setSession(from, {
         ...session,
         step: "fill_form",
         metode: message === "1" ? "Offline" : "Online", // Simpan teks, bukan angka
@@ -333,14 +342,14 @@ export default async function handler(req, res) {
           "Ketik *MENU* untuk layanan lainnya."
       );
 
-      clearSession(from);
+      await clearSession(from);
       return res.status(200).send("OK");
     }
 
     // Mode chat
     if (session?.step === "chat_mode") {
       if (message === "menu") {
-        clearSession(from);
+        await clearSession(from);
 
         const chatMenuText =
           "*Menu Utama*\n\n" +
@@ -350,7 +359,7 @@ export default async function handler(req, res) {
         await sendMessage(chatMenuText);
         return res.status(200).send("OK");
       }
-      
+
       console.log(`Chat message from ${from}: ${rawMessage}`);
       return res.status(200).send("OK");
     }
@@ -372,4 +381,3 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK
   }
 }
-
