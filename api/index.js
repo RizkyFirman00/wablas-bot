@@ -405,12 +405,20 @@ export default async function handler(req, res) {
     }
 
     // Default: tidak dikenali
-    console.log(`Silent mode - ignoring message from ${from}: "${rawMessage}"`);
+    console.log(`Perintah tidak dikenali dari ${from}: "${rawMessage}"`);
+
+    await sendMessage(
+      "Maaf, saya tidak memahami perintah tersebut. " +
+        "Silahkan kirim pesan sesuai dengan yang diperintahkan.\n\n" +
+        "Ketik *Menu* untuk melihat pilihan layanan."
+    );
+    
     return res.status(200).send("OK");
   } catch (error) {
     console.error("Error in webhook handler:", error);
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
 
 
