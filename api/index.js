@@ -150,6 +150,7 @@ export default async function handler(req, res) {
               message: {
                 buttons: buttonLabels,
                 content: text,
+                isGroup: false,
                 footer: "Pilih salah satu opsi di atas",
               },
             },
@@ -243,10 +244,10 @@ export default async function handler(req, res) {
     // STEP 2: Pilihan Layanan (1-4)
     if (["1", "2", "3", "4"].includes(message) && !session) {
       const layananMap = {
-        "1": "Tata Kelola & Manajemen Risiko",
-        "2": "Pengadaan Barang/Jasa",
-        "3": "Pengelolaan Keuangan & BMN",
-        "4": "Kinerja & Kepegawaian",
+        1: "Tata Kelola & Manajemen Risiko",
+        2: "Pengadaan Barang/Jasa",
+        3: "Pengelolaan Keuangan & BMN",
+        4: "Kinerja & Kepegawaian",
       };
 
       setSession(from, {
@@ -256,11 +257,11 @@ export default async function handler(req, res) {
 
       await sendButtons(
         `Anda memilih:\n*${layananMap[message]}*\n\n` +
-          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n\n" +
+          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
           "Mohon konfirmasi metode pelaksanaan konsultasi:",
         [
-          { label: "Offline (Tatap Muka)", id: "offline" },
-          { label: "Online (Virtual)", id: "online" },
+          { label: "Offline (Tatap Muka)", id: "1" },
+          { label: "Online (Virtual)", id: "2" },
         ]
       );
       return res.status(200).send("OK");
@@ -270,7 +271,7 @@ export default async function handler(req, res) {
     if (message === "5" && !session) {
       await sendMessage(
         "*Chat dengan Tim Inspektorat*\n\n" +
-          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
+          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n" +
           "Ketik *menu* untuk kembali ke menu utama."
       );
       setSession(from, { step: "chat_mode" });
@@ -278,40 +279,22 @@ export default async function handler(req, res) {
     }
 
     // STEP 4: Pilih metode (Online/Offline)
-    if (
-      ["online", "offline"].includes(message) &&
-      session?.step === "choose_method"
-    ) {
-      if (message === "offline") {
-        await sendMessage(
-          "*Konsultasi Offline*\n\n" +
-            "Untuk konsultasi tatap muka, silakan hubungi:\n" +
-            "📞 Telp: (021) xxx-xxxx\n" +
-            "📧 Email: inspektorat@lkpp.go.id\n\n" +
-            "Atau datang langsung ke:\n" +
-            "📍 Kantor LKPP, Jakarta\n\n" +
-            "Ketik *menu* untuk kembali."
-        );
-        clearSession(from);
-        return res.status(200).send("OK");
-      }
-
-      // Online - minta form
+    if (["1", "2"].includes(message) && session?.step === "choose_method") {
       setSession(from, {
         ...session,
         step: "fill_form",
-        metode: "online",
+        metode: message,
       });
 
       await sendMessage(
         "*Form Pendaftaran Konsultasi Online*\n\n" +
-          "Dimohon kesediaannya untuk mengisi data berikut:\n\n" +
-          "Format pengisian:\n\n" +
+          "Dimohon kesediaannya untuk mengisi data diri di bawah ini sebagai bagian dari proses pendataan\n\n" +
+          "*Format pengisian:*\n" +
           "Nama: [Nama lengkap Anda]\n" +
           "Unit: [Unit organisasi]\n" +
           "Jabatan: [Jabatan Anda]\n" +
           "Waktu: [Hari/Tanggal dan Jam]\n\n" +
-          "Contoh:\n\n" +
+          "*Contoh:*\n" +
           "Nama: Budi Santoso\n" +
           "Unit: Divisi Keuangan\n" +
           "Jabatan: Staff\n" +
@@ -422,11 +405,7 @@ export default async function handler(req, res) {
     }
 
     // Default: tidak dikenali
-    await sendMessage(
-      "Maaf, saya tidak memahami perintah tersebut. 🤔\n\n" +
-        "Ketik *menu* untuk melihat pilihan layanan."
-    );
-
+    console.log(`Silent mode - ignoring message from ${from}: "${rawMessage}"`);
     return res.status(200).send("OK");
   } catch (error) {
     console.error("Error in webhook handler:", error);
