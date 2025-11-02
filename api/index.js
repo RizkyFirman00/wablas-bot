@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         message:
           "Dimohon kesediaannya untuk mengisi data diri di bawah ini sebagai bagian dari proses pendataan:\n\nNama:\nUnit Organisasi:\nJabatan:\nReferensi waktu (Hari/Jam):",
       },
-      { headers: { Authorization: apiKey } }
+      { headers: { Authorization: authHeader } }
     );
   }
 
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         message:
           "Terima kasih telah menghubungi Klinik Konsultasi Inspektorat. Permintaan Anda telah kami terima, dan tim kami akan segera menghubungi Anda untuk tindak lanjut.",
       },
-      { headers: { Authorization: apiKey } }
+      { headers: { Authorization: authHeader } }
     );
   }
 
