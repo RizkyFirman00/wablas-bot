@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).send("Method not allowed");
   }
 
   try {
@@ -33,9 +33,7 @@ export default async function handler(req, res) {
     // Validasi payload - Wablas mengirim data langsung di root level
     if (!data || !data.phone) {
       console.error("Invalid payload - missing phone:", data);
-      return res
-        .status(400)
-        .json({ error: "Invalid payload - phone is required" });
+      return res.status(200).send("OK"); // Return text bukan JSON
     }
 
     // Extract data dari payload Wablas
@@ -63,42 +61,32 @@ export default async function handler(req, res) {
       isFromMe === "1"
     ) {
       console.log("✋ Ignoring message from bot itself");
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "message from bot" });
+      return res.status(200).send("OK");
     }
 
     // Ignore jika nomor pengirim sama dengan nomor bot
     const botNumber = process.env.WABLAS_PHONE_NUMBER;
     if (botNumber && from === botNumber) {
       console.log("✋ Ignoring message from bot's own number");
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "same as bot number" });
+      return res.status(200).send("OK");
     }
 
     // Ignore pesan yang mengandung JSON (kemungkinan response status dari bot)
-    if (rawMessage.includes('"status"') && rawMessage.includes('"action"')) {
+    if (rawMessage.includes('"status"') || rawMessage.includes('{"status"')) {
       console.log("✋ Ignoring JSON status message");
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "json message" });
+      return res.status(200).send("OK");
     }
 
     // Ignore pesan yang terlalu pendek atau hanya simbol
     if (rawMessage.length < 1) {
       console.log("✋ Ignoring empty message");
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "empty message" });
+      return res.status(200).send("OK");
     }
 
     // Ignore pesan non-text (image, video, dll) - bisa disesuaikan
     if (messageType !== "text") {
       console.log(`Ignoring non-text message type: ${messageType}`);
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "non-text message" });
+      return res.status(200).send("OK");
     }
 
     // Environment variables
@@ -108,7 +96,7 @@ export default async function handler(req, res) {
 
     if (!apiKey || !secretKey) {
       console.error("Missing API credentials");
-      return res.status(500).json({ error: "Server configuration error" });
+      return res.status(200).send("OK");
     }
 
     const authHeader = `${apiKey}.${secretKey}`;
@@ -118,7 +106,6 @@ export default async function handler(req, res) {
       try {
         console.log(`Attempting to send message to ${from}...`);
 
-        // Format sesuai dokumentasi Wablas - menggunakan data array
         const payload = {
           data: [
             {
@@ -129,7 +116,6 @@ export default async function handler(req, res) {
         };
 
         console.log("Payload:", JSON.stringify(payload));
-        console.log("Auth header:", authHeader.substring(0, 20) + "...");
 
         const response = await axios.post(
           `${WABLAS_BASE_URL}/send-message`,
@@ -149,7 +135,6 @@ export default async function handler(req, res) {
         console.error("Status:", error.response?.status);
         console.error("Data:", JSON.stringify(error.response?.data));
         console.error("Message:", error.message);
-        throw error;
       }
     };
 
@@ -195,7 +180,6 @@ export default async function handler(req, res) {
         // Fallback: kirim sebagai pesan biasa jika button gagal
         console.log("Falling back to plain message...");
 
-        // Format button sebagai list text
         const buttonLabels = buttons.map((btn) => btn.label || btn);
         const buttonText = buttonLabels
           .map((label, i) => `${i + 1}. ${label}`)
@@ -253,16 +237,16 @@ export default async function handler(req, res) {
 
       // Delay sebentar sebelum return untuk memastikan pesan terkirim
       await new Promise((resolve) => setTimeout(resolve, 500));
-      return res.status(200).json({ status: "ok" });
+      return res.status(200).send("OK");
     }
 
     // STEP 2: Pilihan Layanan (1-4)
     if (["1", "2", "3", "4"].includes(message) && !session) {
       const layananMap = {
-        1: "Tata Kelola & Manajemen Risiko",
-        2: "Pengadaan Barang/Jasa",
-        3: "Pengelolaan Keuangan & BMN",
-        4: "Kinerja & Kepegawaian",
+        "1": "Tata Kelola & Manajemen Risiko",
+        "2": "Pengadaan Barang/Jasa",
+        "3": "Pengelolaan Keuangan & BMN",
+        "4": "Kinerja & Kepegawaian",
       };
 
       setSession(from, {
@@ -272,14 +256,14 @@ export default async function handler(req, res) {
 
       await sendButtons(
         `Anda memilih:\n*${layananMap[message]}*\n\n` +
-        'Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n'
+          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n\n" +
           "Mohon konfirmasi metode pelaksanaan konsultasi:",
         [
-          { label: "Offline", id: "offline" },
-          { label: "Online", id: "online" },
+          { label: "Offline (Tatap Muka)", id: "offline" },
+          { label: "Online (Virtual)", id: "online" },
         ]
       );
-      return res.status(200).json({ status: "ok" });
+      return res.status(200).send("OK");
     }
 
     // STEP 3: Chat langsung (opsi 5)
@@ -290,7 +274,7 @@ export default async function handler(req, res) {
           "Ketik *menu* untuk kembali ke menu utama."
       );
       setSession(from, { step: "chat_mode" });
-      return res.status(200).json({ status: "ok" });
+      return res.status(200).send("OK");
     }
 
     // STEP 4: Pilih metode (Online/Offline)
@@ -298,28 +282,43 @@ export default async function handler(req, res) {
       ["online", "offline"].includes(message) &&
       session?.step === "choose_method"
     ) {
-      if (message != nll) {
+      if (message === "offline") {
+        await sendMessage(
+          "*Konsultasi Offline*\n\n" +
+            "Untuk konsultasi tatap muka, silakan hubungi:\n" +
+            "📞 Telp: (021) xxx-xxxx\n" +
+            "📧 Email: inspektorat@lkpp.go.id\n\n" +
+            "Atau datang langsung ke:\n" +
+            "📍 Kantor LKPP, Jakarta\n\n" +
+            "Ketik *menu* untuk kembali."
+        );
+        clearSession(from);
+        return res.status(200).send("OK");
+      }
+
+      // Online - minta form
+      setSession(from, {
+        ...session,
+        step: "fill_form",
+        metode: "online",
+      });
+
       await sendMessage(
-        "📝 *Form Pendaftaran Konsultasi Online*\n\n" +
+        "*Form Pendaftaran Konsultasi Online*\n\n" +
           "Dimohon kesediaannya untuk mengisi data berikut:\n\n" +
-          "Format pengisian:\n" +
-          "```\n" +
+          "Format pengisian:\n\n" +
           "Nama: [Nama lengkap Anda]\n" +
           "Unit: [Unit organisasi]\n" +
           "Jabatan: [Jabatan Anda]\n" +
-          "Waktu: [Hari/Tanggal dan Jam]\n" +
-          "```\n\n" +
-          "Contoh:\n" +
-          "```\n" +
+          "Waktu: [Hari/Tanggal dan Jam]\n\n" +
+          "Contoh:\n\n" +
           "Nama: Budi Santoso\n" +
           "Unit: Divisi Keuangan\n" +
           "Jabatan: Staff\n" +
-          "Waktu: Senin, 4 Nov 2025 - 10:00 WIB\n" +
-          "```"
+          "Waktu: Senin, 4 Nov 2025 - 10:00 WIB"
       );
-        clearSession(from);
-        return res.status(200).json({ status: "ok" });
-      }
+      return res.status(200).send("OK");
+    }
 
     // STEP 5: Proses form submission
     if (session?.step === "fill_form") {
@@ -348,13 +347,13 @@ export default async function handler(req, res) {
         await sendMessage(
           "*Data tidak lengkap!*\n\n" +
             "Pastikan Anda mengisi semua field:\n" +
-            "- Nama\n" +
-            "- Unit\n" +
-            "- Jabatan\n" +
-            "- Waktu\n\n" +
+            "✓ Nama\n" +
+            "✓ Unit\n" +
+            "✓ Jabatan\n" +
+            "✓ Waktu\n\n" +
             "Silakan kirim ulang dengan format yang benar."
         );
-        return res.status(200).json({ status: "ok" });
+        return res.status(200).send("OK");
       }
 
       // Kirim ke spreadsheet (jika ada webhook)
@@ -382,7 +381,7 @@ export default async function handler(req, res) {
 
       // Konfirmasi
       await sendMessage(
-        "*Pendaftaran Berhasil!*\n\n" +
+        "✅ *Pendaftaran Berhasil!*\n\n" +
           `Nama: ${nama}\n` +
           `Unit: ${unit}\n` +
           `Jabatan: ${jabatan}\n` +
@@ -394,7 +393,7 @@ export default async function handler(req, res) {
       );
 
       clearSession(from);
-      return res.status(200).json({ status: "ok" });
+      return res.status(200).send("OK");
     }
 
     // Mode chat
@@ -402,7 +401,7 @@ export default async function handler(req, res) {
       if (message === "menu") {
         clearSession(from);
         await sendButtons(
-          "🏥 *Menu Utama*\n\n" + "Silakan pilih layanan konsultasi:",
+          "*Menu Utama*\n\n" + "Silakan pilih layanan konsultasi:",
           [
             { label: "Tata Kelola & Manajemen Risiko", id: "1" },
             { label: "Pengadaan Barang/Jasa", id: "2" },
@@ -411,31 +410,26 @@ export default async function handler(req, res) {
             { label: "Chat dengan Tim Inspektorat", id: "5" },
           ]
         );
-        return res.status(200).json({ status: "ok" });
+        return res.status(200).send("OK");
       } else {
         await sendMessage(
-          "Pesan Anda telah kami terima:\n" +
+          "✅ Pesan Anda telah kami terima:\n" +
             `"${rawMessage}"\n\n` +
             "Tim kami akan segera merespons. Terima kasih!"
         );
-        return res.status(200).json({ status: "ok" });
+        return res.status(200).send("OK");
       }
     }
 
     // Default: tidak dikenali
     await sendMessage(
-      "Maaf, saya tidak memahami perintah tersebut.\n\n" +
+      "Maaf, saya tidak memahami perintah tersebut. 🤔\n\n" +
         "Ketik *menu* untuk melihat pilihan layanan."
     );
 
-    return res.status(200).json({ status: "ok" });
+    return res.status(200).send("OK");
   } catch (error) {
     console.error("Error in webhook handler:", error);
-    return res.status(500).json({
-      error: "Internal server error",
-      message: error.message,
-    });
+    return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
-
-
