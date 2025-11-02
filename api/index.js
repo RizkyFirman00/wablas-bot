@@ -246,11 +246,11 @@ export default async function handler(req, res) {
           "*Inspektorat LKPP*\n\n" +
           "Silakan pilih layanan konsultasi sesuai kebutuhan Anda:",
         [
-          { label: "1️⃣ Tata Kelola & Manajemen Risiko", id: "1" },
-          { label: "2️⃣ Pengadaan Barang/Jasa", id: "2" },
-          { label: "3️⃣ Pengelolaan Keuangan & BMN", id: "3" },
-          { label: "4️⃣ Kinerja & Kepegawaian", id: "4" },
-          { label: "💬 Chat dengan Tim Inspektorat", id: "5" },
+          { label: "Tata Kelola & Manajemen Risiko", id: "1" },
+          { label: "Pengadaan Barang/Jasa", id: "2" },
+          { label: "Pengelolaan Keuangan & BMN", id: "3" },
+          { label: "Kinerja & Kepegawaian", id: "4" },
+          { label: "Chat dengan Tim Inspektorat", id: "5" },
         ]
       );
 
@@ -458,3 +458,4 @@ export default async function handler(req, res) {
     });
   }
 }
+
