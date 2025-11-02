@@ -27,15 +27,38 @@ export default async function handler(req, res) {
   try {
     const data = req.body;
 
-    // Validasi payload
-    if (!data || !data.data) {
-      console.error("Invalid payload:", data);
-      return res.status(400).json({ error: "Invalid payload" });
+    // Log untuk debugging
+    console.log("Received webhook:", JSON.stringify(data, null, 2));
+
+    // Validasi payload - Wablas mengirim data langsung di root level
+    if (!data || !data.phone) {
+      console.error("Invalid payload - missing phone:", data);
+      return res
+        .status(400)
+        .json({ error: "Invalid payload - phone is required" });
     }
 
-    const from = data.data.phone;
-    const rawMessage = data.data.message || "";
-    const message = rawMessage.toLowerCase().trim();
+    // Extract data dari payload Wablas
+    const from = data.phone; // Nomor pengirim
+    const rawMessage = data.message || ""; // Pesan asli
+    const message = rawMessage.toLowerCase().trim(); // Pesan lowercase
+    const messageType = data.messageType || "text"; // Tipe pesan
+    const isFromMe = data.isFromMe || false; // Apakah dari bot sendiri
+
+    // Ignore pesan dari bot sendiri
+    if (isFromMe) {
+      return res
+        .status(200)
+        .json({ status: "ignored", reason: "message from bot" });
+    }
+
+    // Ignore pesan non-text (image, video, dll) - bisa disesuaikan
+    if (messageType !== "text") {
+      console.log(`Ignoring non-text message type: ${messageType}`);
+      return res
+        .status(200)
+        .json({ status: "ignored", reason: "non-text message" });
+    }
 
     // Environment variables
     const apiKey = process.env.WABLAS_API_KEY;
@@ -52,25 +75,35 @@ export default async function handler(req, res) {
     // Fungsi helper untuk mengirim pesan
     const sendMessage = async (text) => {
       try {
-        await axios.post(
+        const response = await axios.post(
           `${WABLAS_BASE_URL}/send-message`,
           { phone: from, message: text },
-          { headers: { Authorization: authHeader } }
+          { headers: { Authorization: authHeader }, timeout: 10000 }
         );
+        console.log("Message sent successfully:", response.data);
       } catch (error) {
-        console.error("Error sending message:", error.message);
+        console.error(
+          "Error sending message:",
+          error.response?.data || error.message
+        );
       }
     };
 
     const sendButtons = async (text, buttons) => {
       try {
-        await axios.post(
+        const response = await axios.post(
           `${WABLAS_BASE_URL}/send-button`,
           { phone: from, message: text, buttons },
-          { headers: { Authorization: authHeader } }
+          { headers: { Authorization: authHeader }, timeout: 10000 }
         );
+        console.log("Buttons sent successfully:", response.data);
       } catch (error) {
-        console.error("Error sending buttons:", error.message);
+        console.error(
+          "Error sending buttons:",
+          error.response?.data || error.message
+        );
+        // Fallback: kirim sebagai pesan biasa jika button gagal
+        await sendMessage(text);
       }
     };
 
@@ -89,14 +122,17 @@ export default async function handler(req, res) {
         ...data,
         timestamp: Date.now(),
       });
+      console.log(`Session set for ${phone}:`, data);
     };
 
     const clearSession = (phone) => {
       sessions.delete(phone);
+      console.log(`Session cleared for ${phone}`);
     };
 
     // Ambil session saat ini
     let session = getSession(from);
+    console.log(`Current session for ${from}:`, session);
 
     // ========== FLOW LOGIC ==========
 
@@ -115,7 +151,7 @@ export default async function handler(req, res) {
           { label: "💬 Chat dengan Tim Inspektorat", id: "5" },
         ]
       );
-      return res.status(200).json({ status: "ok" });
+      return res.status(200).json({ status: "ok", action: "menu_sent" });
     }
 
     // STEP 2: Pilihan Layanan (1-4)
@@ -140,7 +176,9 @@ export default async function handler(req, res) {
           { label: "💻 Online (Virtual)", id: "online" },
         ]
       );
-      return res.status(200).json({ status: "ok" });
+      return res
+        .status(200)
+        .json({ status: "ok", action: "method_choice_sent" });
     }
 
     // STEP 3: Chat langsung (opsi 5)
@@ -151,7 +189,9 @@ export default async function handler(req, res) {
           "Ketik *menu* untuk kembali ke menu utama."
       );
       setSession(from, { step: "chat_mode" });
-      return res.status(200).json({ status: "ok" });
+      return res
+        .status(200)
+        .json({ status: "ok", action: "chat_mode_activated" });
     }
 
     // STEP 4: Pilih metode (Online/Offline)
@@ -170,7 +210,9 @@ export default async function handler(req, res) {
             "Ketik *menu* untuk kembali."
         );
         clearSession(from);
-        return res.status(200).json({ status: "ok" });
+        return res
+          .status(200)
+          .json({ status: "ok", action: "offline_info_sent" });
       }
 
       // Online - minta form
@@ -198,7 +240,9 @@ export default async function handler(req, res) {
           "Waktu: Senin, 4 Nov 2025 - 10:00 WIB\n" +
           "```"
       );
-      return res.status(200).json({ status: "ok" });
+      return res
+        .status(200)
+        .json({ status: "ok", action: "form_request_sent" });
     }
 
     // STEP 5: Proses form submission
@@ -234,22 +278,29 @@ export default async function handler(req, res) {
             "- Waktu\n\n" +
             "Silakan kirim ulang dengan format yang benar."
         );
-        return res.status(200).json({ status: "ok" });
+        return res
+          .status(200)
+          .json({ status: "ok", action: "validation_failed" });
       }
 
       // Kirim ke spreadsheet (jika ada webhook)
       if (spreadsheetWebhook) {
         try {
-          await axios.post(spreadsheetWebhook, {
-            timestamp: new Date().toISOString(),
-            nomor: from,
-            nama,
-            unit,
-            jabatan,
-            waktu,
-            layanan: session.layanan,
-            metode: session.metode,
-          });
+          await axios.post(
+            spreadsheetWebhook,
+            {
+              timestamp: new Date().toISOString(),
+              nomor: from,
+              nama,
+              unit,
+              jabatan,
+              waktu,
+              layanan: session.layanan,
+              metode: session.metode,
+            },
+            { timeout: 10000 }
+          );
+          console.log("Data sent to spreadsheet successfully");
         } catch (error) {
           console.error("Error sending to spreadsheet:", error.message);
         }
@@ -269,7 +320,9 @@ export default async function handler(req, res) {
       );
 
       clearSession(from);
-      return res.status(200).json({ status: "ok" });
+      return res
+        .status(200)
+        .json({ status: "ok", action: "registration_completed" });
     }
 
     // Mode chat
@@ -286,14 +339,17 @@ export default async function handler(req, res) {
             { label: "💬 Chat dengan Tim Inspektorat", id: "5" },
           ]
         );
+        return res.status(200).json({ status: "ok", action: "back_to_menu" });
       } else {
         await sendMessage(
           "✅ Pesan Anda telah kami terima:\n" +
             `"${rawMessage}"\n\n` +
             "Tim kami akan segera merespons. Terima kasih!"
         );
+        return res
+          .status(200)
+          .json({ status: "ok", action: "chat_message_received" });
       }
-      return res.status(200).json({ status: "ok" });
     }
 
     // Default: tidak dikenali
@@ -302,7 +358,7 @@ export default async function handler(req, res) {
         "Ketik *menu* untuk melihat pilihan layanan."
     );
 
-    return res.status(200).json({ status: "ok" });
+    return res.status(200).json({ status: "ok", action: "unknown_command" });
   } catch (error) {
     console.error("Error in webhook handler:", error);
     return res.status(500).json({
