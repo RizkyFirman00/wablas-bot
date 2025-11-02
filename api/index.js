@@ -295,25 +295,11 @@ export default async function handler(req, res) {
       ["online", "offline"].includes(message) &&
       session?.step === "choose_method"
     ) {
-      if (message === "offline") {
-        await sendMessage(
-          "*Konsultasi Offline*\n\n" +
-            "Untuk konsultasi tatap muka, silakan hubungi:\n" +
-            "📞 Telp: (021) xxx-xxxx\n" +
-            "📧 Email: inspektorat@lkpp.go.id\n\n" +
-            "Atau datang langsung ke:\n" +
-            "📍 Kantor LKPP, Jakarta\n\n" +
-            "Ketik *menu* untuk kembali."
-        );
-        clearSession(from);
-        return res.status(200).send("OK");
-      }
-
-      // Online - minta form
+      // Updat session dengan metode yang dipilih
       setSession(from, {
         ...session,
         step: "fill_form",
-        metode: "online",
+        metode: message,
       });
 
       await sendMessage(
@@ -446,4 +432,5 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
 
