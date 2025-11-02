@@ -216,19 +216,6 @@ export default async function handler(req, res) {
 
     // Ambil session saat ini
     let session = getSession(from);
-
-    if (!session) {
-      await sendMessage(
-        `👋 Halo ${
-          pushName || ""
-        }! Selamat datang di Layanan Klinik Konsultasi *Inspektorat LKPP*.\n\n` +
-          "Ketik *halo*, *hai*, atau *menu* untuk memulai percakapan dan melihat pilihan layanan."
-      );
-
-      setSession(from, { step: "greeted" });
-      return res.status(200).send("OK");
-    }
-
     console.log(`Current session for ${from}:`, session);
 
     // ========== FLOW LOGIC ==========
@@ -432,3 +419,4 @@ export default async function handler(req, res) {
     return res.status(200).send("OK"); // Tetap return OK agar tidak muncul error di chat
   }
 }
+
