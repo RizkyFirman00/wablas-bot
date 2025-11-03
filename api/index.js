@@ -154,14 +154,29 @@ export default async function handler(req, res) {
     const getSession = async (phone) => {
       const key = `session:${phone}`;
       const sessionString = await redis.get(key);
-      console.log(`Session sekarang ${sessionString}`);
-      return null;
-      };
+
+      if (!sessionString) {
+        console.log(`Session for ${phone} not found in Redis.`);
+        return null;
+      }
+
+      console.log(`Raw session data for ${phone}: "${sessionString}"`);
+
+      try {
+        return JSON.parse(sessionString);
+      } catch (error) {
+        console.error(
+          `Failed to parse session for ${phone}. Deleting corrupt key. Data: "${sessionString}"`,
+          error
+        );
+        await redis.del(key);
+        return null;
+      }
+    };
 
     const setSession = async (phone, data) => {
       const key = `session:${phone}`;
       const value = JSON.stringify(data);
-      // Konversi SESSION_TIMEOUT (milidetik) ke detik untuk Redis
       const expiryInSeconds = Math.floor(SESSION_TIMEOUT / 1000); // 1800 detik
 
       await redis.set(key, value, { ex: expiryInSeconds });
