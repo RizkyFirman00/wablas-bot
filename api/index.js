@@ -377,7 +377,7 @@ export default async function handler(req, res) {
     let layananTerpilih = null;
 
     // Deteksi layanan berdasarkan keyword (jika tidak ada session)
-    if (!session) {
+    if (!session || !["choose_method", "fill_form", "chat_mode"].includes(session?.step)) {
       if (
         message === "1" ||
         message.includes("tata kelola") ||
