@@ -302,8 +302,8 @@ export default async function handler(req, res) {
       await setSession(from, { step: "choose_method", layanan: layananTerpilih });
       await sendMessage(
         `Anda memilih:\n*${layananTerpilih}*\n\n` +
-          "Terima kasih atas pilihan Anda.\n" +
-          "Mohon konfirmasi metode konsultasi:\n\n" +
+          "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi.\n" +
+          "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
           "1. Offline (Tatap Muka)\n2. Online (Virtual)\n\n" +
           "Balas dengan *ANGKA* pilihan Anda (contoh: 1)."
       );
