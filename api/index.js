@@ -233,72 +233,6 @@ export default async function handler(req, res) {
     let session = await getSession(from);
     console.log(`Current session for ${from}:`, session);
 
-    // Definisi layanan
-    const layananMap = {
-      1: "Tata Kelola & Manajemen Risiko",
-      2: "Pengadaan Barang/Jasa",
-      3: "Pengelolaan Keuangan & BMN",
-      4: "Kinerja & Kepegawaian",
-    };
-
-    let layananTerpilih = null;
-
-    // Deteksi layanan berdasarkan keyword (jika tidak ada session)
-    if (!session) {
-      if (
-        message === "1" ||
-        message.includes("tata kelola") ||
-        message.includes("risiko")
-      ) {
-        layananTerpilih = layananMap["1"];
-      } else if (message === "2" || message.includes("pengadaan")) {
-        layananTerpilih = layananMap["2"];
-      } else if (
-        message === "3" ||
-        message.includes("keuangan") ||
-        message.includes("bmn")
-      ) {
-        layananTerpilih = layananMap["3"];
-      } else if (
-        message === "4" ||
-        message.includes("kinerja") ||
-        message.includes("kepegawaian")
-      ) {
-        layananTerpilih = layananMap["4"];
-      }
-    }
-
-    // STEP 2: Pilihan Layanan (1-4)
-    if (layananTerpilih && !session) {
-      await setSession(from, {
-        step: "choose_method",
-        layanan: layananTerpilih,
-      });
-
-      const metodeText =
-        `Anda memilih:\n*${layananTerpilih}*\n\n` +
-        "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
-        "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
-        "1. Offline (Tatap Muka)\n" +
-        "2. Online (Virtual)\n\n" +
-        "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
-
-      await sendMessage(metodeText);
-      return res.status(200).send("OK");
-      D;
-    }
-
-    // STEP 3: Chat langsung (opsi 5)
-    if ((message === "5" || message.includes("chat")) && !session) {
-      await sendMessage(
-        "*Chat dengan Tim Inspektorat*\n\n" +
-          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
-          "Ketik *MENU* untuk kembali ke menu utama."
-      );
-      await setSession(from, { step: "chat_mode" });
-      return res.status(200).send("OK");
-    }
-
     // STEP 4: Pilih metode (Online/Offline)
     if (["1", "2"].includes(message) && session?.step === "choose_method") {
       await setSession(from, {
@@ -412,6 +346,71 @@ export default async function handler(req, res) {
       );
 
       await clearSession(from);
+      return res.status(200).send("OK");
+    }
+
+    // Definisi layanan
+    const layananMap = {
+      1: "Tata Kelola & Manajemen Risiko",
+      2: "Pengadaan Barang/Jasa",
+      3: "Pengelolaan Keuangan & BMN",
+      4: "Kinerja & Kepegawaian",
+    };
+
+    let layananTerpilih = null;
+
+    // Deteksi layanan berdasarkan keyword (jika tidak ada session)
+    if (!session) {
+      if (
+        message === "1" ||
+        message.includes("tata kelola") ||
+        message.includes("risiko")
+      ) {
+        layananTerpilih = layananMap["1"];
+      } else if (message === "2" || message.includes("pengadaan")) {
+        layananTerpilih = layananMap["2"];
+      } else if (
+        message === "3" ||
+        message.includes("keuangan") ||
+        message.includes("bmn")
+      ) {
+        layananTerpilih = layananMap["3"];
+      } else if (
+        message === "4" ||
+        message.includes("kinerja") ||
+        message.includes("kepegawaian")
+      ) {
+        layananTerpilih = layananMap["4"];
+      }
+    }
+
+    // STEP 2: Pilihan Layanan (1-4)
+    if (layananTerpilih && !session) {
+      await setSession(from, {
+        step: "choose_method",
+        layanan: layananTerpilih,
+      });
+
+      const metodeText =
+        `Anda memilih:\n*${layananTerpilih}*\n\n` +
+        "Terima kasih atas pilihan Anda terhadap jenis layanan konsultasi\n" +
+        "Mohon konfirmasi metode pelaksanaan konsultasi:\n\n" +
+        "1. Offline (Tatap Muka)\n" +
+        "2. Online (Virtual)\n\n" +
+        "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
+
+      await sendMessage(metodeText);
+      return res.status(200).send("OK");
+    }
+
+    // STEP 3: Chat langsung (opsi 5)
+    if ((message === "5" || message.includes("chat")) && !session) {
+      await sendMessage(
+        "*Chat dengan Tim Inspektorat*\n\n" +
+          "Silakan ketik pesan Anda, dan tim kami akan merespons secepat mungkin.\n\n" +
+          "Ketik *MENU* untuk kembali ke menu utama."
+      );
+      await setSession(from, { step: "chat_mode" });
       return res.status(200).send("OK");
     }
 
