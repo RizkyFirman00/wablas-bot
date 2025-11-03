@@ -155,6 +155,7 @@ export default async function handler(req, res) {
       const key = `session:${phone}`;
       const sessionString = await redis.get(key);
 
+      // 1. Jika tidak ada session sama sekali
       if (!sessionString) {
         console.log(`Session for ${phone} not found in Redis.`);
         return null;
@@ -162,15 +163,17 @@ export default async function handler(req, res) {
 
       console.log(`Raw session data for ${phone}: "${sessionString}"`);
 
+      // 2. Jika ada session, coba parse
       try {
         return JSON.parse(sessionString);
       } catch (error) {
+        // 3. Jika session korup (misal: "[object Object]"), hapus dan return null
         console.error(
           `Failed to parse session for ${phone}. Deleting corrupt key. Data: "${sessionString}"`,
           error
         );
-        await redis.del(key);
-        return null;
+        await redis.del(key); // Hapus data korup
+        return null; // Anggap tidak ada session
       }
     };
 
