@@ -20,6 +20,63 @@ const MENU_LIST_TEXT =
   "5. Chat dengan Tim Inspektorat\n\n" +
   "Balas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
+export const getSession = async (phone) => {
+  const key = `session:${phone}`;
+  try {
+    const raw = await redis.get(key);
+
+    // Jika belum ada session
+    if (!raw) return null;
+
+    // Jika datanya sudah berupa objek
+    if (typeof raw === "object") return raw;
+
+    // Jika datanya string JSON
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.warn(`⚠️ Failed to parse session for ${phone}. Deleting corrupt key.`);
+        await redis.del(key);
+        return null;
+      }
+    }
+
+    // Jika bentuknya aneh (bukan string/objek)
+    console.warn(`⚠️ Unexpected session format for ${phone}:`, raw);
+    await redis.del(key);
+    return null;
+
+  } catch (err) {
+    console.error("❌ Error getting session:", err);
+    return null;
+  }
+};
+
+export const setSession = async (phone, data) => {
+  const key = `session:${phone}`;
+  try {
+    // Pastikan disimpan sebagai JSON valid
+    const jsonData = typeof data === "string" ? data : JSON.stringify(data);
+    const expiry = Math.floor(SESSION_TIMEOUT / 1000);
+
+    await redis.set(key, jsonData, { ex: expiry });
+    console.log(`✅ Session set for ${phone} (expires in ${expiry}s):`, data);
+  } catch (err) {
+    console.error("❌ Failed to save session:", err);
+  }
+};
+
+export const clearSession = async (phone) => {
+  const key = `session:${phone}`;
+  try {
+    await redis.del(key);
+    console.log(`🧹 Session cleared for ${phone}`);
+  } catch (err) {
+    console.error("❌ Failed to clear session:", err);
+  }
+};
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
