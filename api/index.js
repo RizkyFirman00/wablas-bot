@@ -331,6 +331,24 @@ export default async function handler(req, res) {
         }
       }
 
+      // Mode chat
+    if (session?.step === "chat_mode") {
+      if (message === "menu") {
+        await clearSession(from);
+
+        const chatMenuText =
+          "*Menu Utama*\n\n" +
+          "Silakan pilih layanan konsultasi:\n\n" +
+          MENU_LIST_TEXT;
+
+        await sendMessage(chatMenuText);
+        return res.status(200).send("OK");
+      }
+
+      console.log(`Chat message from ${from}: ${rawMessage}`);
+      return res.status(200).send("OK");
+    }
+
       // Konfirmasi
       await sendMessage(
         "✅ *Pendaftaran Berhasil!*\n\n" +
@@ -411,24 +429,6 @@ export default async function handler(req, res) {
           "Ketik *MENU* untuk kembali ke menu utama."
       );
       await setSession(from, { step: "chat_mode" });
-      return res.status(200).send("OK");
-    }
-
-    // Mode chat
-    if (session?.step === "chat_mode") {
-      if (message === "menu") {
-        await clearSession(from);
-
-        const chatMenuText =
-          "*Menu Utama*\n\n" +
-          "Silakan pilih layanan konsultasi:\n\n" +
-          MENU_LIST_TEXT;
-
-        await sendMessage(chatMenuText);
-        return res.status(200).send("OK");
-      }
-
-      console.log(`Chat message from ${from}: ${rawMessage}`);
       return res.status(200).send("OK");
     }
 
