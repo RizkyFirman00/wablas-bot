@@ -154,22 +154,9 @@ export default async function handler(req, res) {
     const getSession = async (phone) => {
       const key = `session:${phone}`;
       const sessionString = await redis.get(key);
-
-      if (!sessionString) {
-        return null;
-      }
-
-      try {
-        return JSON.parse(sessionString);
-      } catch (error) {
-        console.error(
-          `Failed to parse session for ${phone}. Data: "${sessionString}"`,
-          error
-        );
-        await redis.del(key);
-        return null;
-      }
-    };
+      console.log(`Session sekarang ${sessionString}`);
+      return null;
+      };
 
     const setSession = async (phone, data) => {
       const key = `session:${phone}`;
