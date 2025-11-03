@@ -166,7 +166,7 @@ export default async function handler(req, res) {
     if (greetings.includes(message)) {
       await clearSession(from);
       const welcomeText =
-        "*Selamat datang di Layanan Klinik Konsultasi*\n" +
+        "*Selamat Datang di Layanan Klinik Konsultasi*\n" +
         "*Inspektorat Lembaga Kebijakan Pengadaan Barang/Jasa Pemerintah.*\n\n" +
         "Silakan pilih layanan konsultasi sesuai kebutuhan Anda:\n\n" +
         MENU_LIST_TEXT;
@@ -335,4 +335,5 @@ export default async function handler(req, res) {
     console.error("🔥 Error in webhook handler:", error);
     return res.status(200).send("OK");
   }
+
 }
