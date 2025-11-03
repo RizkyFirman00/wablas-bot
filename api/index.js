@@ -207,50 +207,6 @@ export default async function handler(req, res) {
       }
     };
 
-    // // Session management (VERSI REDIS)
-    // const getSession = async (phone) => {
-    //   const key = `session:${phone}`;
-    //   const sessionString = await redis.get(key);
-
-    //   // 1. Jika tidak ada session sama sekali
-    //   if (!sessionString) {
-    //     console.log(`Session for ${phone} not found in Redis.`);
-    //     return null;
-    //   }
-
-    //   console.log(`Raw session data for ${phone}: "${sessionString}"`);
-
-    //   // 2. Jika ada session, coba parse
-    //   try {
-    //     return JSON.parse(sessionString);
-    //   } catch (error) {
-    //     // 3. Jika session korup (misal: "[object Object]"), hapus dan return null
-    //     console.error(
-    //       `Failed to parse session for ${phone}. Deleting corrupt key. Data: "${sessionString}"`,
-    //       error
-    //     );
-    //     await redis.del(key); // Hapus data korup
-    //     return null; // Anggap tidak ada session
-    //   }
-    // };
-
-    // const setSession = async (phone, data) => {
-    //   const key = `session:${phone}`;
-    //   const value = JSON.stringify(data);
-    //   const expiryInSeconds = Math.floor(SESSION_TIMEOUT / 1000); // 1800 detik
-
-    //   await redis.set(key, value, { ex: expiryInSeconds });
-    //   console.log(
-    //     `Session set for ${phone} (expires in ${expiryInSeconds}s):`,
-    //     data
-    //   );
-    // };
-
-    // const clearSession = async (phone) => {
-    //   await redis.del(`session:${phone}`);
-    //   console.log(`Session cleared for ${phone}`);
-    // };
-
     // ========== FLOW LOGIC ==========
     // STEP 1: Menu Utama
     if (
