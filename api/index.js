@@ -1,14 +1,8 @@
 import axios from "axios";
-import { Redis } from "@upstash/redis";
+import { createSessionStore, SessionStoreError } from "../lib/session-store.js";
+export { createSessionStore, SessionStoreError } from "../lib/session-store.js";
 
-// ========== KONFIGURASI REDIS ==========
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-const WABLAS_BASE_URL = "https://tegal.wablas.com/api/v2";
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 menit
+const WABLAS_BASE_URL = process.env.WABLAS_BASE_URL || "https://tegal.wablas.com/api/v2";
 
 // ========== TEKS MENU UTAMA ==========
 const MENU_LIST_TEXT = [
@@ -19,59 +13,23 @@ const MENU_LIST_TEXT = [
   "5. Chat dengan Tim Inspektorat",
 ].join("\n") + "\n\nBalas dengan *ANGKA* pilihan Anda (contoh: 1).";
 
-export class SessionStoreError extends Error {
-  constructor(message, options) {
-    super(message, options);
-    this.name = "SessionStoreError";
+// The legacy Vercel endpoint loads Redis only when it receives a message.
+let legacyStore;
+async function getLegacyStore() {
+  if (!legacyStore) {
+    const { Redis } = await import("@upstash/redis");
+    legacyStore = createSessionStore(new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    }));
   }
+  return legacyStore;
 }
 
-export function createSessionStore(client) {
-  return {
-    async getSession(phone) {
-      try {
-        const raw = await client.get(`session:${phone}`);
-        if (raw === null || raw === undefined) return null;
-
-        const session = typeof raw === "string" ? JSON.parse(raw) : raw;
-        const validStep = ["choose_method", "fill_form", "chat_mode"].includes(session?.step);
-        const validLayanan = session?.step === "chat_mode" ||
-          (typeof session?.layanan === "string" && session.layanan.trim().length > 0);
-        const validMetode = session?.step !== "fill_form" ||
-          ["Offline", "Online"].includes(session.metode);
-        if (!validStep || !validLayanan || !validMetode) {
-          throw new Error("Invalid session data");
-        }
-        return session;
-      } catch (cause) {
-        throw new SessionStoreError("Failed to read session", { cause });
-      }
-    },
-
-    async setSession(phone, data) {
-      try {
-        const jsonData = typeof data === "string" ? data : JSON.stringify(data);
-        const result = await client.set(`session:${phone}`, jsonData, {
-          ex: Math.floor(SESSION_TIMEOUT / 1000),
-        });
-        if (result !== "OK") throw new Error("Session write was not acknowledged");
-      } catch (cause) {
-        throw new SessionStoreError("Failed to save session", { cause });
-      }
-    },
-
-    async clearSession(phone) {
-      try {
-        await client.del(`session:${phone}`);
-      } catch (cause) {
-        throw new SessionStoreError("Failed to clear session", { cause });
-      }
-    },
-  };
-}
-
-const sessionStore = createSessionStore(redis);
-export const { getSession, setSession, clearSession } = sessionStore;
+export const getSession = async (phone) => (await getLegacyStore()).getSession(phone);
+export const setSession = async (phone, data) => (await getLegacyStore()).setSession(phone, data);
+export const clearSession = async (phone) => (await getLegacyStore()).clearSession(phone);
+const sessionStore = { getSession, setSession, clearSession };
 
 // ========== HANDLER UTAMA ==========
 export function createHandler({ store = sessionStore, httpClient = axios } = {}) {
@@ -179,8 +137,7 @@ export function createHandler({ store = sessionStore, httpClient = axios } = {})
           MENU_LIST_TEXT;
 
         await sendMessage(welcomeText);
-        await new Promise((r) => setTimeout(r, 500));
-        return res.status(200).send("OK");
+          return res.status(200).send("OK");
       }
 
       // Ambil session
