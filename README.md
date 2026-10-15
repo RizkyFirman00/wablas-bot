@@ -111,6 +111,8 @@ Gunakan tujuan backup baru untuk setiap salinan dan simpan di tempat privat.
 
 ## Pengembangan dan pengujian
 
+Untuk membuat ulang endpoint penyimpanan pendaftaran, lihat [tabel dan Apps Script](deploy/apps-script/README.md).
+
 Node.js 22 atau 24 LTS:
 
 ```sh

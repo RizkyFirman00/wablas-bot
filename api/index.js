@@ -1,4 +1,5 @@
 import axios from "axios";
+import { randomUUID } from "node:crypto";
 import { createSessionStore, SessionStoreError } from "../lib/session-store.js";
 export { createSessionStore, SessionStoreError } from "../lib/session-store.js";
 
@@ -181,11 +182,11 @@ export function createHandler({ store = sessionStore, httpClient = axios } = {})
 
         for (const line of lines) {
           const lower = line.toLowerCase();
-          if (lower.startsWith("nama:")) nama = line.split(":")[1]?.trim() || "";
-          else if (lower.startsWith("unit:")) unit = line.split(":")[1]?.trim() || "";
-          else if (lower.startsWith("jabatan:")) jabatan = line.split(":")[1]?.trim() || "";
+          if (lower.startsWith("nama:")) nama = line.slice(line.indexOf(":") + 1).trim();
+          else if (lower.startsWith("unit:")) unit = line.slice(line.indexOf(":") + 1).trim();
+          else if (lower.startsWith("jabatan:")) jabatan = line.slice(line.indexOf(":") + 1).trim();
           else if (lower.startsWith("referensi hari/jam:"))
-            waktu = line.split(":")[1]?.trim() || "";
+            waktu = line.slice(line.indexOf(":") + 1).trim();
         }
 
         if (!nama || !unit || !jabatan || !waktu) {
@@ -198,31 +199,34 @@ export function createHandler({ store = sessionStore, httpClient = axios } = {})
         }
 
         // Kirim ke spreadsheet
-        if (spreadsheetWebhook) {
-          try {
-            await httpClient.post(
-              spreadsheetWebhook,
-              {
-                timestamp: new Date().toISOString(),
-                nomor: from,
-                nama,
-                unit,
-                jabatan,
-                waktu,
-                layanan: session.layanan,
-                metode: session.metode,
-              },
-              { timeout: 10000 }
-            );
-            console.log("✅ Data sent to spreadsheet");
-          } catch (error) {
-            console.error("❌ Error sending to spreadsheet:", error.message);
-            await sendMessage(
-              "❌ *Pendaftaran Gagal!*\n\nTerjadi kesalahan saat menyimpan data Anda. " +
-                "Silakan kirim ulang format isian Anda."
-            );
-            return res.status(200).send("OK");
+        try {
+          if (!spreadsheetWebhook) throw new Error("Spreadsheet webhook is not configured");
+          const response = await httpClient.post(
+            spreadsheetWebhook,
+            {
+              submission_id: String(data.id || randomUUID()),
+              timestamp: new Date().toISOString(),
+              nomor: from,
+              nama,
+              unit,
+              jabatan,
+              waktu,
+              layanan: session.layanan,
+              metode: session.metode,
+            },
+            { timeout: 10000 }
+          );
+          if (response.data?.status !== true || response.data?.saved !== true) {
+            throw new Error("Spreadsheet did not confirm saved data");
           }
+          console.log("✅ Data sent to spreadsheet");
+        } catch (error) {
+          console.error("❌ Error sending to spreadsheet:", error.message);
+          await sendMessage(
+            "❌ *Pendaftaran Gagal!*\n\nTerjadi kesalahan saat menyimpan data Anda. " +
+              "Silakan kirim ulang format isian Anda."
+          );
+          return res.status(200).send("OK");
         }
 
         await sendMessage(
