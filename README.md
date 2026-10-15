@@ -1,8 +1,8 @@
 # Bot Klinik Konsultasi — Docker Compose
 
-Bot Node.js dengan SQLite di VPS. Tidak memerlukan Vercel atau Redis saat dijalankan lewat Compose. Pengiriman dan penerimaan pesan tetap memakai Wablas.
+Bot Node.js dengan SQLite di komputer/server sendiri, diakses melalui Cloudflare Tunnel. Tidak memerlukan Vercel atau Redis saat dijalankan lewat Compose. Pengiriman dan penerimaan pesan tetap memakai Wablas.
 
-## Menjalankan di VPS
+## Menjalankan di komputer/server
 
 Siapkan Git dan Docker Engine dengan plugin Docker Compose, lalu:
 
@@ -13,13 +13,13 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Isi `.env` di VPS:
+Isi `.env` di komputer/server:
 
 - `WABLAS_API_KEY` dan `WABLAS_SECRET_KEY`: wajib, gunakan kredensial perangkat Wablas yang sama.
 - `WABLAS_PHONE_NUMBER`: nomor WhatsApp bot untuk filter pesan sendiri.
 - `WABLAS_BASE_URL`: sesuaikan dengan server Wablas perangkat; nilai awal `https://tegal.wablas.com/api/v2`.
 - `SPREADSHEET_WEBHOOK`: URL penyimpanan pendaftaran yang sudah dipakai, bila ada.
-- `BOT_PORT`: port lokal VPS, nilai awal `3000`.
+- `BOT_PORT`: port lokal komputer/server, nilai awal `3000`.
 
 Jangan commit `.env` ke Git.
 
@@ -31,19 +31,35 @@ curl --fail http://127.0.0.1:3000/healthz
 
 Health check harus mengembalikan `{"status":"ok","storage":"sqlite"}`. Container berjalan sebagai user non-root dan restart otomatis kecuali dihentikan manual.
 
-## HTTPS dan webhook Wablas
+## Cloudflare Tunnel dan webhook Wablas
 
-Port bot terikat ke `127.0.0.1` secara default. Pilih salah satu:
-
-**Jika VPS sudah memiliki reverse proxy HTTPS**, teruskan subdomain bot ke `http://127.0.0.1:3000`. Jika reverse proxy berjalan di container lain, gunakan jaringan Docker bersama; alamat loopback container berbeda dari loopback VPS.
-
-**Jika port 80/443 VPS masih kosong**, gunakan Caddy yang disediakan. Arahkan DNS subdomain ke IP VPS, buka port 80/443, lalu tambahkan `BOT_DOMAIN=bot.domainkamu.id` ke `.env` dan jalankan:
+Untuk `cloudflared` yang berjalan langsung di komputer/server yang sama dengan Docker, gunakan **Compose utama saja**:
 
 ```sh
-docker compose -f compose.yaml -f compose.https.yaml up -d --build
+docker compose up -d --build
 ```
 
-Caddy mengurus sertifikat HTTPS otomatis. Untuk perintah update/status/log berikutnya, gunakan kedua argumen `-f` yang sama jika memilih Caddy.
+Di Cloudflare Tunnel yang sudah ada, tambahkan published application route / public hostname:
+
+| Pengaturan | Nilai |
+| --- | --- |
+| Hostname | Subdomain pilihanmu, misalnya `bot.domainkamu.id` |
+| Service type | `HTTP` |
+| Service URL | `127.0.0.1:3000` |
+
+Biarkan path hostname kosong agar `/healthz` dan `/api/index` sama-sama diteruskan. Jika `BOT_PORT` diubah, sesuaikan port pada Service URL. Nomor port ini adalah port host, bukan port internal container.
+
+Pengaturan ini memakai HTTPS dari Cloudflare. Tidak perlu menjalankan `compose.https.yaml`, mengatur `BOT_DOMAIN`, atau membuka port 3000 ke internet. Token Tunnel tetap berada di konfigurasi `cloudflared` yang sudah ada; bot tidak memerlukannya. Komputer/server dan `cloudflared` harus tetap berjalan agar webhook tersedia.
+
+Periksa endpoint publik:
+
+```sh
+curl --fail https://bot.domainkamu.id/healthz
+```
+
+Respons yang benar adalah JSON `status: ok` dan `storage: sqlite`. Pastikan hostname webhook bisa diakses Wablas tanpa halaman login atau tantangan browser Cloudflare. Jika perlindungan tersebut aktif, sesuaikan aturan khusus hostname/path webhook.
+
+Panduan ini khusus connector yang berjalan langsung di host yang sama. Jika `cloudflared` dipindahkan ke container Docker, alamat `127.0.0.1` di dalamnya menunjuk container connector; gunakan jaringan Docker bersama dan alamat service bot sebagai origin.
 
 Setelah `https://bot.domainkamu.id/healthz` berhasil, ubah webhook pesan masuk di dashboard Wablas ke:
 
@@ -54,6 +70,16 @@ https://bot.domainkamu.id/api/index
 `/webhook` juga diterima. Payload JSON dan form URL-encoded didukung.
 
 Sesi Upstash lama tidak disalin ke SQLite. Saat pindah endpoint, pengguna mengetik `MENU` untuk mulai ulang. Uji `MENU → 1 → 2`, lalu pastikan bot meminta form **Online** untuk **Tata Kelola & Manajemen Risiko**. Setelah alur WhatsApp berhasil, deployment Vercel dan database Upstash lama bisa dinonaktifkan.
+
+## Alternatif tanpa Cloudflare Tunnel
+
+Jika nanti memakai server dengan akses langsung dan port 80/443 tersedia, `compose.https.yaml` menyediakan Caddy sebagai alternatif. Arahkan DNS subdomain ke IP server, isi `BOT_DOMAIN=bot.domainkamu.id` di `.env`, lalu jalankan kedua file Compose:
+
+```sh
+docker compose -f compose.yaml -f compose.https.yaml up -d --build
+```
+
+Untuk pengaturan Cloudflare Tunnel di atas, bagian alternatif ini tidak digunakan.
 
 ## Update dari Git
 
